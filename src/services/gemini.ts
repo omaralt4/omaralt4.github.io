@@ -1,7 +1,11 @@
 import type { PediatricSummary } from "@/components/SummaryDisplay";
 
-// Get API key from environment variable or use the provided key
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyC5SD6x8Fg-9nguqp7RoQk5dbsvmaPrXqE";
+// Get API key from environment variable
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!GEMINI_API_KEY) {
+  throw new Error("VITE_GEMINI_API_KEY environment variable is not set. Please create a .env file with your API key.");
+}
 // Using Gemini 2.5 Flash - good balance of performance and cost
 // Alternative models: gemini-2.5-pro (better reasoning, higher cost) or gemini-2.5-flash-lite (lower cost, faster)
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
