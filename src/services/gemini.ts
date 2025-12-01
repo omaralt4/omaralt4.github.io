@@ -40,12 +40,40 @@ Given a pediatric discharge summary, produce a JSON object with the following st
   "redFlags": ["Array of red flags written in the discharge summary, rewritten in parent-friendly phrasing. Do not add new ones."],
   "medications": [{"name": "medication name", "dose": "dose as stated", "timing": "timing as stated", "notes": "optional notes"}],
   "followUp": ["Array of follow-up instructions"],
-  "expectedCourse": "Rewrite only what the discharge summary states about the expected course. If not specified, state: 'The discharge summary does not specify what to expect over the next few days.'"
+  "expectedCourse": "Rewrite only what the discharge summary states about the expected course. If not specified, state: 'The discharge summary does not specify what to expect over the next few days.'",
+  "quizQuestions": [
+    {
+      "id": "string-unique-id",
+      "question": "MCQ question text about a safety-critical concept",
+      "options": [
+        "Option A text",
+        "Option B text",
+        "Option C text",
+        "Option D text"
+      ],
+      "correctOptionIndexes": [0, 2],
+      "category": "redFlag" | "medication" | "care" | "followUp",
+      "explanation": "1–2 sentence, parent-friendly explanation shown after the parent answers.",
+      "weight": 0–100 (number indicating importance; higher for safety-critical)
+    }
+  ]
 }
 
 3. Output Format
 
 You MUST output ONLY valid JSON. No markdown formatting, no code blocks, no explanations outside the JSON. The JSON must match the structure exactly.
+
+Additional quiz question requirements:
+- Generate up to 5 total questions, but fewer is acceptable if information is limited.
+- Focus FIRST on safety-critical items:
+  - Red flags / when to return to ER
+  - Medication dosing / timing
+  - Required follow-up
+- It is acceptable (but not required) to include 1–2 questions about general care instructions (whatToDo / whatNotToDo).
+- Each question must have BETWEEN 2 AND 4 options.
+- Multi-select is allowed: use "correctOptionIndexes" for the set of all correct options.
+- Do NOT create options or correct answers that introduce new clinical facts not present in the discharge summary.
+- "explanation" must clearly describe why the correct options are correct and the incorrect ones are not, using ONLY facts from the summary.
 
 4. Tone & Style Requirements
 
@@ -104,6 +132,15 @@ export interface GeminiSummaryResponse {
   }>;
   followUp: string[];
   expectedCourse: string;
+  quizQuestions?: Array<{
+    id: string;
+    question: string;
+    options: string[];
+    correctOptionIndexes: number[];
+    category: "redFlag" | "medication" | "care" | "followUp";
+    explanation?: string;
+    weight?: number;
+  }>;
 }
 
 export async function processDischargeSummary(
@@ -276,7 +313,7 @@ Output the JSON object now:`;
     }
 
     // Validate and transform to PediatricSummary format
-    return {
+    const summary: PediatricSummary = {
       simpleExplanation: parsed.simpleExplanation || "The discharge summary was processed, but no explanation could be extracted.",
       whatToDo: Array.isArray(parsed.whatToDo) ? parsed.whatToDo : [],
       whatNotToDo: Array.isArray(parsed.whatNotToDo) ? parsed.whatNotToDo : [],
@@ -285,6 +322,70 @@ Output the JSON object now:`;
       followUp: Array.isArray(parsed.followUp) ? parsed.followUp : [],
       expectedCourse: parsed.expectedCourse || "The discharge summary does not specify what to expect over the next few days.",
     };
+
+    // Attach quiz questions if present, with basic validation and defaults
+    if (Array.isArray(parsed.quizQuestions)) {
+      summary.quizQuestions = parsed.quizQuestions
+        .filter((q) => q && q.question && Array.isArray(q.options) && q.options.length >= 2)
+        .map((q) => {
+          // Remove confusing meta-options like "all of the above" before clamping
+          const cleanedOptions = q.options.filter((opt) => {
+            if (!opt) return false;
+            const t = opt.trim().toLowerCase();
+            if (!t) return false;
+            return ![
+              "all of the above",
+              "none of the above",
+              "all of the options above",
+              "none of the options above",
+              "a and b",
+              "a and b only",
+              "both a and b",
+            ].includes(t);
+          });
+
+          // Clamp options to max 4 as per spec
+          const options = cleanedOptions.slice(0, 4);
+          const maxIndex = options.length - 1;
+          const uniqueCorrectIndexes = Array.from(
+            new Set(
+              (q.correctOptionIndexes || [])
+                .filter((idx) => Number.isInteger(idx) && idx >= 0 && idx <= maxIndex)
+            )
+          );
+
+          // Derive a default weight if not provided
+          let weight = q.weight;
+          if (typeof weight !== "number" || Number.isNaN(weight)) {
+            switch (q.category) {
+              case "redFlag":
+                weight = 30;
+                break;
+              case "medication":
+                weight = 25;
+                break;
+              case "followUp":
+                weight = 20;
+                break;
+              case "care":
+              default:
+                weight = 15;
+            }
+          }
+
+          return {
+            id: q.id || q.question.slice(0, 32),
+            question: q.question,
+            options,
+            correctOptionIndexes: uniqueCorrectIndexes.length > 0 ? uniqueCorrectIndexes : [0],
+            category: q.category ?? "care",
+            explanation: q.explanation,
+            weight,
+          };
+        });
+    }
+
+    return summary;
   } catch (error) {
     console.error("Error processing discharge summary:", error);
     throw new Error(

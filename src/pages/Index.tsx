@@ -8,38 +8,16 @@ import { Quiz } from "@/components/Quiz";
 import { PDFExport } from "@/components/PDFExport";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { processDischargeSummary, gradeQuizAnswer } from "@/services/gemini";
+import { processDischargeSummary } from "@/services/gemini";
 
 type AppState = "landing" | "input" | "summary" | "quiz" | "export";
 
 interface QuizAnswer {
   questionId: string;
-  answer: string;
-  isCorrect: boolean;
-  feedback: string;
+  // For MCQ, we store which options were selected and how correct they were
+  selectedOptionIndexes: number[];
+  scoreFraction: number;
 }
-
-// Process discharge summary using Gemini API
-const processSummary = async (text: string): Promise<PediatricSummary> => {
-  return await processDischargeSummary(text);
-};
-
-// Grade quiz answer using Gemini API
-const gradeAnswer = async (
-  question: { correctAnswer: string; question: string },
-  answer: string,
-  summaryContext: PediatricSummary
-): Promise<{ isCorrect: boolean; feedback: string }> => {
-  // Create a context string from the summary for better grading
-  const context = `
-Summary: ${summaryContext.simpleExplanation}
-What To Do: ${summaryContext.whatToDo.join("; ")}
-Red Flags: ${summaryContext.redFlags.join("; ")}
-Medications: ${summaryContext.medications.map(m => `${m.name} - ${m.dose}, ${m.timing}`).join("; ")}
-  `.trim();
-  
-  return await gradeQuizAnswer(question.question, question.correctAnswer, answer, context);
-};
 
 const Index = () => {
   const [appState, setAppState] = useState<AppState>("landing");
@@ -60,7 +38,7 @@ const Index = () => {
   const handleSubmitSummary = async (text: string) => {
     setIsProcessing(true);
     try {
-      const result = await processSummary(text);
+      const result = await processDischargeSummary(text);
       setSummary(result);
       setAppState("summary");
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -81,35 +59,6 @@ const Index = () => {
   const handleStartQuiz = () => {
     setAppState("quiz");
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleGradeAnswer = async (
-    question: { correctAnswer: string; question: string },
-    answer: string
-  ) => {
-    setIsGrading(true);
-    try {
-      if (!summary) {
-        throw new Error("Summary not available");
-      }
-      return await gradeAnswer(question, answer, summary);
-    } catch (error) {
-      console.error("Error grading answer:", error);
-      // Fallback to simple keyword matching
-      const keywords = question.correctAnswer.toLowerCase().split(/[;,\s]+/);
-      const answerLower = answer.toLowerCase();
-      const matchedKeywords = keywords.filter(kw => kw.length > 3 && answerLower.includes(kw));
-      const isCorrect = matchedKeywords.length >= Math.min(3, keywords.length / 3);
-      
-      return {
-        isCorrect,
-        feedback: isCorrect 
-          ? "Great! You've correctly identified the key points."
-          : `The key points to remember are: ${question.correctAnswer.split(';').slice(0, 2).join(', ')}. Try to include these in your answer.`
-      };
-    } finally {
-      setIsGrading(false);
-    }
   };
 
   const handleQuizComplete = (score: number, answers: QuizAnswer[]) => {
@@ -151,8 +100,6 @@ const Index = () => {
           <Quiz 
             summary={summary} 
             onComplete={handleQuizComplete}
-            isGrading={isGrading}
-            onGradeAnswer={handleGradeAnswer}
           />
         )}
 
