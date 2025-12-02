@@ -71,7 +71,8 @@ Additional quiz question requirements:
   - Required follow-up
 - It is acceptable (but not required) to include 1–2 questions about general care instructions (whatToDo / whatNotToDo).
 - Each question must have BETWEEN 2 AND 4 options.
-- Multi-select is allowed: use "correctOptionIndexes" for the set of all correct options.
+- CRITICAL: Do NOT include any meta-options such as "all of the above", "none of the above", "all of the options above", "none of the options above", "a and b", "a and b only", "both a and b", or any similar options that refer to other options rather than providing direct answers.
+- Multi-select is allowed: use "correctOptionIndexes" as an array containing the index(es) of ALL correct options. For example, if options 0 and 2 are both correct, use [0, 2]. You MUST label ALL correct options in the correctOptionIndexes array - do not omit any correct answers.
 - Do NOT create options or correct answers that introduce new clinical facts not present in the discharge summary.
 - "explanation" must clearly describe why the correct options are correct and the incorrect ones are not, using ONLY facts from the summary.
 
@@ -89,9 +90,11 @@ Additional quiz question requirements:
 
 If the input text is incomplete, heavily redacted, or missing essential elements:
 - Still rewrite what is available.
-- Use empty arrays for missing sections.
+- Use empty arrays for missing sections (whatToDo, whatNotToDo, redFlags, medications, followUp).
 - For expectedCourse, if not specified, use: "The discharge summary does not specify what to expect over the next few days."
+- For simpleExplanation, if no information is available, use: "The discharge summary does not provide enough information to generate an explanation. Please ask your physician for clarification."
 - Do NOT infer missing information.
+- When a section is empty (empty array or missing), the application will display a message prompting the user to ask their physician about that section.
 
 6. Age Awareness
 
@@ -328,24 +331,8 @@ Output the JSON object now:`;
       summary.quizQuestions = parsed.quizQuestions
         .filter((q) => q && q.question && Array.isArray(q.options) && q.options.length >= 2)
         .map((q) => {
-          // Remove confusing meta-options like "all of the above" before clamping
-          const cleanedOptions = q.options.filter((opt) => {
-            if (!opt) return false;
-            const t = opt.trim().toLowerCase();
-            if (!t) return false;
-            return ![
-              "all of the above",
-              "none of the above",
-              "all of the options above",
-              "none of the options above",
-              "a and b",
-              "a and b only",
-              "both a and b",
-            ].includes(t);
-          });
-
-          // Clamp options to max 4 as per spec
-          const options = cleanedOptions.slice(0, 4);
+          // Clamp options to max 4 as per spec (LLM should not generate "all of the above" type options)
+          const options = q.options.filter(opt => opt && opt.trim()).slice(0, 4);
           const maxIndex = options.length - 1;
           const uniqueCorrectIndexes = Array.from(
             new Set(

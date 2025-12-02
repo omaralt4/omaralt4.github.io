@@ -85,16 +85,22 @@ export function SummaryDisplay({ summary, onStartQuiz }: SummaryDisplayProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
-                {summary.redFlags.map((flag, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-                    </div>
-                    <span className="text-foreground font-medium">{flag}</span>
-                  </li>
-                ))}
-              </ul>
+              {summary.redFlags.length > 0 ? (
+                <ul className="space-y-3">
+                  {summary.redFlags.map((flag, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+                      </div>
+                      <span className="text-foreground font-medium">{flag}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground italic">
+                  You should ask your physician about when to return to the ER.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -109,14 +115,20 @@ export function SummaryDisplay({ summary, onStartQuiz }: SummaryDisplayProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
-                  {summary.whatToDo.map((item, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                      <span className="text-foreground">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                {summary.whatToDo.length > 0 ? (
+                  <ul className="space-y-3">
+                    {summary.whatToDo.map((item, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    You should ask your physician about what to do.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -129,28 +141,34 @@ export function SummaryDisplay({ summary, onStartQuiz }: SummaryDisplayProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
-                  {summary.whatNotToDo.map((item, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <XCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                      <span className="text-foreground">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                {summary.whatNotToDo.length > 0 ? (
+                  <ul className="space-y-3">
+                    {summary.whatNotToDo.map((item, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <XCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    You should ask your physician about what to avoid.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Medications */}
-          {summary.medications.length > 0 && (
-            <Card variant="elevated">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Pill className="w-5 h-5 text-primary" />
-                  Medications
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card variant="elevated">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Pill className="w-5 h-5 text-primary" />
+                Medications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {summary.medications.length > 0 ? (
                 <div className="space-y-4">
                   {summary.medications.map((med, index) => (
                     <div 
@@ -175,9 +193,13 @@ export function SummaryDisplay({ summary, onStartQuiz }: SummaryDisplayProps) {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <p className="text-muted-foreground italic">
+                  You should ask your physician about medications.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Follow-up */}
           <Card variant="elevated">
@@ -188,14 +210,20 @@ export function SummaryDisplay({ summary, onStartQuiz }: SummaryDisplayProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
-                {summary.followUp.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <ChevronRight className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
+              {summary.followUp.length > 0 ? (
+                <ul className="space-y-3">
+                  {summary.followUp.map((item, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <ChevronRight className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground italic">
+                  You should ask your physician about follow-up tasks.
+                </p>
+              )}
             </CardContent>
           </Card>
 
