@@ -2,12 +2,55 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Shield, Sparkles, AlertCircle } from "lucide-react";
+import { Shield, Sparkles, AlertCircle, FileText } from "lucide-react";
 
 interface SummaryInputProps {
   onSubmit: (text: string) => void;
   isLoading: boolean;
 }
+
+// Sample discharge note - replace this with your actual sample note
+const SAMPLE_DISCHARGE_NOTE = `Age: 5 years
+Sex: Female
+Diagnosis: Acute viral gastroenteritis with dehydration
+
+Hospital Course
+
+Child admitted for vomiting, loose stools, and reduced oral intake over 24 hours. Initial evaluation showed mild dehydration. She received IV fluids and was monitored for urine output and ongoing losses. No blood in stool and no abdominal findings to suggest surgical pathology. Electrolytes remained stable. Hydration and activity improved steadily, and she tolerated oral fluids well by the following day.
+
+Medications on Discharge
+
+Paracetamol: 15 mg/kg every 6 hours as needed for fever or discomfort.
+
+Oral rehydration solution: Small, frequent amounts as needed to maintain hydration.
+
+Home Care - What to Avoid
+
+Avoid fruit juices, sodas, and sports drinks — they can worsen diarrhea.
+
+Avoid heavy, greasy, or sugary foods for a day or two.
+
+Avoid anti-diarrheal medications unless specifically prescribed (not recommended for young children).
+
+Avoid large meals; stick to small, frequent feeds at first.
+
+Short-Term Course (Expected Changes)
+
+Loose stools may continue for 2–3 days but should gradually decrease in frequency.
+
+Appetite may be reduced initially but should return progressively.
+
+Mild abdominal discomfort or intermittent cramping can occur as the gut recovers.
+
+Energy level should improve steadily; some tiredness is normal.
+
+Watch for any signs of dehydration returning (fewer wet diapers/urination, dry mouth, lethargy).
+
+Seek medical care if vomiting restarts persistently, stool becomes bloody, she drinks poorly, or you notice worsening lethargy.
+
+Follow-Up
+
+Primary care visit in 2-3 days or sooner if symptoms worsen.`;
 
 export function SummaryInput({ onSubmit, isLoading }: SummaryInputProps) {
   const [inputText, setInputText] = useState("");
@@ -15,6 +58,10 @@ export function SummaryInput({ onSubmit, isLoading }: SummaryInputProps) {
   const handleSubmit = () => {
     if (inputText.trim().length < 50) return;
     onSubmit(inputText);
+  };
+
+  const handleUseSample = () => {
+    setInputText(SAMPLE_DISCHARGE_NOTE);
   };
 
   return (
@@ -36,7 +83,20 @@ export function SummaryInput({ onSubmit, isLoading }: SummaryInputProps) {
             </CardHeader>
 
             <CardContent className="space-y-6">
+              <div className="flex items-center justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUseSample}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Try with a sample note
+                </Button>
+              </div>
               <Textarea
+                id="discharge-textarea"
                 placeholder="Paste the discharge summary text here...
 
 Example: Patient is a 4-year-old male who presented with acute otitis media. Treatment includes amoxicillin 250mg three times daily for 10 days. Return if fever persists beyond 48 hours, ear drainage develops, or symptoms worsen..."
