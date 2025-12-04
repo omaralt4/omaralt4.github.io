@@ -2,6 +2,7 @@
 // Works with Vercel, Netlify, or similar platforms
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { google } from 'googleapis';
 
 interface EmailQuizData {
   question: string;
@@ -41,9 +42,6 @@ export default async function handler(
       return res.status(400).json({ message: 'Patient ID is required' });
     }
 
-    // Import Gmail service  
-    const { sendEmailViaGmail } = await import('../src/utils/gmailService.ts');
-
     // Check Gmail credentials
     if (!process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_CLIENT_SECRET || !process.env.GMAIL_REFRESH_TOKEN) {
       console.error('Gmail credentials not set');
@@ -81,6 +79,70 @@ export default async function handler(
       message: error instanceof Error ? error.message : 'Internal server error',
     });
   }
+}
+
+/**
+ * Sends an email using Gmail API
+ */
+async function sendEmailViaGmail(
+  to: string,
+  subject: string,
+  htmlBody: string
+): Promise<string> {
+  // Create OAuth2 client
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/oauth2callback'
+  );
+
+  // Set the refresh token
+  if (!process.env.GMAIL_REFRESH_TOKEN) {
+    throw new Error('GMAIL_REFRESH_TOKEN is not set');
+  }
+
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+  });
+
+  // Refresh the access token if needed
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  oauth2Client.setCredentials(credentials);
+
+  // Get Gmail client
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  const userEmail = process.env.GMAIL_USER_EMAIL;
+
+  if (!userEmail) {
+    throw new Error('GMAIL_USER_EMAIL is not set');
+  }
+
+  // Create email message in RFC 2822 format
+  const message = [
+    `To: ${to}`,
+    `From: ${userEmail}`,
+    `Subject: ${subject}`,
+    `Content-Type: text/html; charset=utf-8`,
+    '',
+    htmlBody,
+  ].join('\n');
+
+  // Encode message in base64url format
+  const encodedMessage = Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  // Send the email
+  const response = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: {
+      raw: encodedMessage,
+    },
+  });
+
+  return response.data.id || 'unknown';
 }
 
 function createEmailTemplate(
